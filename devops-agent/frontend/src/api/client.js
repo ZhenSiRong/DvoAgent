@@ -80,6 +80,30 @@ export async function streamChatFetch(message, sessionId, onEvent) {
   const decoder = new TextDecoder()
   let buffer = ''
 
+  function _flushBuffer() {
+    const lines = buffer.split('\n')
+    buffer = ''
+    let currentEvent = null
+    let currentData = null
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('event:')) {
+        currentEvent = trimmed.slice(6).trim()
+      } else if (trimmed.startsWith('data:')) {
+        currentData = trimmed.slice(5).trim()
+      } else if (trimmed === '' && currentEvent && currentData) {
+        try {
+          const payload = JSON.parse(currentData)
+          onEvent(currentEvent, payload)
+        } catch (e) {
+          onEvent(currentEvent, { raw: currentData })
+        }
+        currentEvent = null
+        currentData = null
+      }
+    }
+  }
+
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
@@ -92,11 +116,12 @@ export async function streamChatFetch(message, sessionId, onEvent) {
     let currentData = null
 
     for (const line of lines) {
-      if (line.startsWith('event: ')) {
-        currentEvent = line.slice(7).trim()
-      } else if (line.startsWith('data: ')) {
-        currentData = line.slice(6).trim()
-      } else if (line === '' && currentEvent && currentData) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('event:')) {
+        currentEvent = trimmed.slice(6).trim()
+      } else if (trimmed.startsWith('data:')) {
+        currentData = trimmed.slice(5).trim()
+      } else if (trimmed === '' && currentEvent && currentData) {
         try {
           const payload = JSON.parse(currentData)
           onEvent(currentEvent, payload)
@@ -108,6 +133,9 @@ export async function streamChatFetch(message, sessionId, onEvent) {
       }
     }
   }
+
+  // 流结束后 flush 剩余 buffer（防止最后一个事件因缺少尾换行而丢失）
+  _flushBuffer()
 }
 
 export const getChatHistory = (sessionId, page = 1, pageSize = 50) =>

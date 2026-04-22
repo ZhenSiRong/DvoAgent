@@ -57,7 +57,14 @@ async def chat(body: ChatRequest) -> APIResponse:
     if body.session_id:
         history = await load_session_history(body.session_id)
 
-    # Step 3: 调用 Agent 核心循环
+    # Step 3: 先保存用户消息（无论LLM是否成功，用户消息不能丢）
+    await append_message(
+        session_id=session_id,
+        role="user",
+        content=body.message,
+    )
+
+    # Step 4: 调用 Agent 核心循环
     try:
         start = time.monotonic()
         reply, ctx = await run_agent(
@@ -65,13 +72,6 @@ async def chat(body: ChatRequest) -> APIResponse:
             session_id=session_id,
             history=history,
             stream=body.stream,
-        )
-
-        # Step 4: 保存用户消息到 DB
-        await append_message(
-            session_id=session_id,
-            role="user",
-            content=body.message,
         )
 
         # Step 5: 保存助手回复到 DB
@@ -153,6 +153,12 @@ async def chat_stream(body: ChatRequest) -> StreamingResponse:
         """SSE 事件生成器"""
         import json
 
+        # 先保存用户消息（LLM失败也不能丢）
+        try:
+            await append_message(session_id=session_id, role="user", content=body.message)
+        except Exception as db_err:
+            logger.warning("流式对话保存用户消息失败: %s", db_err)
+
         full_reply = ""
         session_id_final = session_id
 
@@ -179,14 +185,13 @@ async def chat_stream(body: ChatRequest) -> StreamingResponse:
             yield f"event: error\ndata: {json.dumps(error_event, ensure_ascii=False)}\n\n"
             return
 
-        # 保存到 DB（流结束后异步保存，不阻塞响应）
+        # 保存助手回复到 DB（流结束后异步保存，不阻塞响应）
         try:
-            await append_message(session_id=session_id_final, role="user", content=body.message)
             if full_reply:
                 await append_message(session_id=session_id_final, role="assistant", content=full_reply)
             await touch_session(session_id_final)
         except Exception as db_err:
-            logger.warning("流式对话后保存消息失败: %s", db_err)
+            logger.warning("流式对话后保存助手回复失败: %s", db_err)
 
     return StreamingResponse(
         event_generator(),

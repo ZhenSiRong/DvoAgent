@@ -14,14 +14,14 @@ class Settings(BaseSettings):
     llm_protocol: str = "openai"  # openai | anthropic
     llm_base_url: str = "https://api.minimaxi.com/v1"
     llm_api_key: str = "sk-cp-WuUWdO9Vm74-DeEurDgH2FC9wpW3HoWQtVO11gxYHrLwQ3_bCLE2GYx4tqrV0gqunmd_ri1Id5Tu2z0CcgEy-dP-Pdg2FaTXIPQoY3nvaMiUJ3eoC-v3fI4"
-    llm_model: str = "MiniMax-M2.1-highspeed"
+    llm_model: str = "MiniMax-M2.1"
     llm_temperature: float = 0.3
     llm_max_tokens: int = 4096
 
     # === LLM（Anthropic 协议备用） ===
     anthropic_base_url: str = "https://api.minimaxi.com/anthropic"
     anthropic_api_key: str = "sk-cp-WuUWdO9Vm74-DeEurDgH2FC9wpW3HoWQtVO11gxYHrLwQ3_bCLE2GYx4tqrV0gqunmd_ri1Id5Tu2z0CcgEy-dP-Pdg2FaTXIPQoY3nvaMiUJ3eoC-v3fI4"
-    anthropic_model: str = "MiniMax-M2.1-highspeed"
+    anthropic_model: str = "MiniMax-M2.1"
 
     # === 数据库 ===
     database_url: str = "sqlite+aiosqlite:///./data/devops_agent.db"

@@ -116,6 +116,7 @@ export default function ChatPage() {
 
     let assistantReply = ''
     let finalSessionId = currentSessionId
+    let streamError = null
 
     try {
       await streamChatFetch(userMessage, currentSessionId, (eventType, payload) => {
@@ -126,14 +127,24 @@ export default function ChatPage() {
           assistantReply = payload.reply || ''
           finalSessionId = payload.session_id || currentSessionId
         }
+        if (eventType === 'error') {
+          streamError = payload.detail || payload.message || '未知错误'
+        }
       })
 
-      // 添加助手回复
+      // 添加助手回复（或错误提示）
       if (assistantReply) {
         setMessages(prev => [...prev, {
           role: 'assistant',
           content: assistantReply,
           id: 'assistant-' + Date.now(),
+        }])
+      } else if (streamError) {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `❌ Agent 推理异常: ${streamError}`,
+          id: 'error-' + Date.now(),
+          isError: true,
         }])
       }
 

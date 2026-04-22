@@ -304,7 +304,18 @@ def _to_openai_msg(msg: LLMMessage) -> dict:
     if msg.tool_call_id:
         m["tool_call_id"] = msg.tool_call_id
     if msg.tool_calls:
-        m["tool_calls"] = msg.tool_calls
+        # 标准化格式 → OpenAI 原始格式（MiniMax/DeepSeek 等兼容接口需要）
+        m["tool_calls"] = [
+            {
+                "id": tc.get("id", ""),
+                "type": "function",
+                "function": {
+                    "name": tc.get("name", ""),
+                    "arguments": json.dumps(tc.get("arguments", tc.get("args", {})), ensure_ascii=False),
+                },
+            }
+            for tc in msg.tool_calls
+        ]
     return m
 
 
