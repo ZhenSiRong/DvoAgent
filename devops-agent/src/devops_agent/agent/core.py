@@ -22,13 +22,10 @@ Agent 核心引擎 — DevOps Agent 的大脑
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import time
 from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
 from typing import Any
 
 from ..config import get_settings, get_llm_runtime_config, LLMRuntimeConfig
@@ -41,7 +38,6 @@ from ..db import (
 )
 from ..db import (
     append_reasoning_entry,
-    get_reasoning_chain,
 )
 from ..tools import get_tool_definitions as _registry_get_tool_definitions
 from ..tools import dispatch_tool as _registry_dispatch_tool
@@ -62,9 +58,6 @@ logger = logging.getLogger(__name__)
 
 # 最大工具调用轮次（防止无限循环）
 MAX_TOOL_ROUNDS = 10
-
-# 会话持久化文件路径
-SESSION_STATE_DIR = Path("./data/sessions")
 
 
 @dataclass
@@ -271,12 +264,11 @@ async def run_agent(
     messages.append(LLMMessage(role="user", content=user_input))
 
     # ---- 五段式日志：SENSE 阶段 ----
-    import json as _json
     await append_reasoning_entry(
         session_id=sid,
         round_number=ctx.tool_round + 1,
         stage="SENSE",
-        content=_json.dumps({"user_input": user_input, "input_length": len(user_input)}, ensure_ascii=False),
+        content=json.dumps({"user_input": user_input, "input_length": len(user_input)}, ensure_ascii=False),
         metadata={"timestamp": time.time()},
     )
 
@@ -323,7 +315,7 @@ async def run_agent(
             session_id=sid,
             round_number=ctx.tool_round + 1,
             stage="ANALYZE",
-            content=_json.dumps({
+            content=json.dumps({
                 "has_tool_calls": bool(response.tool_calls),
                 "finish_reason": response.finish_reason,
                 "protocol": response.protocol_used,
@@ -338,7 +330,7 @@ async def run_agent(
                 session_id=sid,
                 round_number=ctx.tool_round + 1,
                 stage="PLAN",
-                content=_json.dumps({
+                content=json.dumps({
                     "tool_count": len(response.tool_calls),
                     "tool_calls": [
                         {"name": tc.get("name", ""), "args": tc.get("arguments", tc.get("args", {}))}
@@ -366,7 +358,7 @@ async def run_agent(
                 session_id=sid,
                 round_number=ctx.tool_round + 1,
                 stage="OUTPUT",
-                content=_json.dumps({
+                content=json.dumps({
                     "reply_preview": reply_text[:300],
                     "total_tool_rounds": ctx.tool_round,
                     "total_executions": ctx.execution_count,
@@ -423,7 +415,7 @@ async def run_agent(
             tool_result = await dispatch_tool_call(tool_name, args, ctx)
 
             # ---- 五段式日志：EXECUTE 阶段 ----
-            exec_content = _json.dumps({
+            exec_content = json.dumps({
                 "tool_name": tool_name,
                 "arguments": args,
                 "result_preview": str(tool_result)[:500],
@@ -482,7 +474,6 @@ async def run_agent_stream(
         {"event": "output", "reply": "...", "metrics": {...}}
         {"event": "done", "session_id": "..."}
     """
-    import json as _json
     llm_cfg = await get_llm_runtime_config()
     sid = session_id or f"sess_{int(time.time() * 1000)}"
     ctx = AgentContext(session_id=sid)
@@ -513,7 +504,7 @@ async def run_agent_stream(
             if role == "tool":
                 messages.append(LLMMessage(
                     role="tool",
-                    content=_json.dumps(content, ensure_ascii=False),
+                    content=json.dumps(content, ensure_ascii=False),
                     name=msg.get("name", ""),
                     tool_call_id=msg.get("tool_call_id", ""),
                 ))
@@ -703,7 +694,7 @@ async def save_session_history(session_id: str, messages: list[dict]) -> None:
     # 确保会话存在
     existing = await get_session(session_id)
     if not existing:
-        await create_session(title="新对话")
+        await create_session(title="新对话", session_id=session_id)
 
     for msg in messages:
         role = msg.get("role", "user")

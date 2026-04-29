@@ -21,14 +21,14 @@ class Settings(BaseSettings):
     # === LLM（OpenAI 协议） ===
     llm_protocol: str = "openai"  # openai | anthropic
     llm_base_url: str = "https://api.minimaxi.com/v1"
-    llm_api_key: str = "sk-cp-WuUWdO9Vm74-DeEurDgH2FC9wpW3HoWQtVO11gxYHrLwQ3_bCLE2GYx4tqrV0gqunmd_ri1Id5Tu2z0CcgEy-dP-Pdg2FaTXIPQoY3nvaMiUJ3eoC-v3fI4"
+    llm_api_key: str = ""  # 请在 .env 中配置 LLM_API_KEY
     llm_model: str = "MiniMax-M2.1"
     llm_temperature: float = 0.3
     llm_max_tokens: int = 4096
 
     # === LLM（Anthropic 协议备用） ===
     anthropic_base_url: str = "https://api.minimaxi.com/anthropic"
-    anthropic_api_key: str = "sk-cp-WuUWdO9Vm74-DeEurDgH2FC9wpW3HoWQtVO11gxYHrLwQ3_bCLE2GYx4tqrV0gqunmd_ri1Id5Tu2z0CcgEy-dP-Pdg2FaTXIPQoY3nvaMiUJ3eoC-v3fI4"
+    anthropic_api_key: str = ""  # 请在 .env 中配置 ANTHROPIC_API_KEY
     anthropic_model: str = "MiniMax-M2.1"
 
     # === 数据库 ===
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     )
 
     # === 认证 ===
-    jwt_secret_key: str = "change-this-secret-key"
+    jwt_secret_key: str = ""  # 请在 .env 中配置 JWT_SECRET_KEY（至少32字符随机字符串）
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440
 
