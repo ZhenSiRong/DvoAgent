@@ -197,7 +197,7 @@ class DatabaseManager:
         # 自动迁移：为 audit_logs 补充分区执行审计所需的列（兼容已有数据库）
         await self._migrate_audit_logs(db)
         await db.commit()
-        logger.info("数据库表初始化完成（7 张表）")
+        logger.info("数据库表初始化完成（sessions, messages, audit_logs, configs, conversation_state, memories, reasoning_chains, dynamic_tools + 2 张保留表）")
 
     async def _migrate_audit_logs(self, db: aiosqlite.Connection) -> None:
         """检查并补充 audit_logs 缺失的列（命令执行审计专用）"""
